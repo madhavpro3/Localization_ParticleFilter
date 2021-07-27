@@ -108,7 +108,38 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   and the following is a good resource for the actual equation to implement
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
+   for(Particle& p:particles){
+     // convert observations of landmarks from vehicle coords to Map coords
+     vector<LandmarkObs> v_lmark_mapcoords;
+     for(LandmarkObs lmark_vehcoords:observations){
+       LandmarkObs lmark_mapcoords;
+       lmark_mapcoords.id=lmark_vehcoords.id;
+       lmark_mapcoords.x = p.x + cos(p.theta)*lmark_vehcoords.x - sin(p.theta)*lmark_vehcoords.y;
+       lmark_mapcoords.y = p.y + sin(p.theta)*lmark_vehcoords.x + cos(p.theta)*lmark_vehcoords.y;
+       v_lmark_mapcoords.push_back(lmark_mapcoords);
+     }
 
+     // associate lmark_mapcoords with true landmarks
+     for(LandmarkObs& lmark_mapcoords: v_lmark_mapcoords){
+       int closestlmarkid=map_landmarks.landmark_list[0].id;
+       double closestlmarkdist = dist(lmark_mapcoords.x,lmark_mapcoords.y,
+                    map_landmarks.landmark_list[0].x,map_landmarks.landmark_list[0].y);
+
+       for(int i=1;i<map_landmarks.landmark_list.size();++i){
+         double lmarkdist = dist(lmark_mapcoords.x,lmark_mapcoords.y,
+                      map_landmarks.landmark_list[i].x,map_landmarks.landmark_list[i].y);
+          if(lmarkdist < closestlmarkdist){
+            closestlmarkid=map_landmarks.landmark_list[i].id;
+            closestlmarkdist=lmarkdist;
+          }
+       }
+
+       p.associations[lmark_mapcoords.id-1]=closestlmarkid;
+     }
+
+     // find weight of the particle based on the associations
+
+   }
 }
 
 void ParticleFilter::resample() {
