@@ -21,6 +21,7 @@
 using std::string;
 using std::vector;
 using std::normal_distribution;
+using namespace std;
 
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
@@ -61,6 +62,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
    *  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
    *  http://www.cplusplus.com/reference/random/default_random_engine/
    */
+   // Bicycle model
    std::default_random_engine gen;
    for(Particle& p:particles){
 
@@ -68,9 +70,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
      double x_f = p.x + (velocity/yaw_rate)*(sin(theta_f) - sin(p.theta));
      double y_f = p.y + (velocity/yaw_rate)*(cos(p.theta) - cos(theta_f));
 
-     normal_distribution<double> posx(x_f,std[0]);
-     normal_distribution<double> posy(y_f,std[1]);
-     normal_distribution<double> ang(theta_f,std[2]);
+     normal_distribution<double> posx(x_f,std_pos[0]);
+     normal_distribution<double> posy(y_f,std_pos[1]);
+     normal_distribution<double> ang(theta_f,std_pos[2]);
 
      p.x = posx(gen);
      p.y = posy(gen);
@@ -108,7 +110,10 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   and the following is a good resource for the actual equation to implement
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
+   weights.clear();
+   int particleinx=0;
    for(Particle& p:particles){
+     p.associations.clear();
      // convert observations of landmarks from vehicle coords to Map coords
      vector<LandmarkObs> v_lmark_mapcoords;
      for(LandmarkObs lmark_vehcoords:observations){
@@ -119,27 +124,47 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
        v_lmark_mapcoords.push_back(lmark_mapcoords);
      }
 
+     double particleprob=1;
      // associate lmark_mapcoords with true landmarks
      for(LandmarkObs& lmark_mapcoords: v_lmark_mapcoords){
-       int closestlmarkid=map_landmarks.landmark_list[0].id;
-       double closestlmarkdist = dist(lmark_mapcoords.x,lmark_mapcoords.y,
-                    map_landmarks.landmark_list[0].x,map_landmarks.landmark_list[0].y);
 
-       for(int i=1;i<map_landmarks.landmark_list.size();++i){
+       int closestlmarkid=map_landmarks.landmark_list[0].id_i;
+       double closestlmarkdist = dist(lmark_mapcoords.x,lmark_mapcoords.y,
+                    map_landmarks.landmark_list[0].x_f,map_landmarks.landmark_list[0].y_f);
+
+
+       // for(int i=1;i<map_landmarks.landmark_list.size();++i){
+       for(int i=1;i<42;++i){
+
          double lmarkdist = dist(lmark_mapcoords.x,lmark_mapcoords.y,
-                      map_landmarks.landmark_list[i].x,map_landmarks.landmark_list[i].y);
+                      map_landmarks.landmark_list[i].x_f,map_landmarks.landmark_list[i].y_f);
+
+
           if(lmarkdist < closestlmarkdist){
-            closestlmarkid=map_landmarks.landmark_list[i].id;
+            closestlmarkid=map_landmarks.landmark_list[i].id_i;
             closestlmarkdist=lmarkdist;
           }
        }
 
-       p.associations[lmark_mapcoords.id-1]=closestlmarkid;
+       p.associations.push_back(closestlmarkid);
+
+       double power = pow((lmark_mapcoords.x - map_landmarks.landmark_list[closestlmarkid-1].x_f)/std_landmark[0],2) +
+        pow((lmark_mapcoords.y - map_landmarks.landmark_list[closestlmarkid-1].y_f)/std_landmark[1],2);
+       power/=2;
+
+       double prob = exp(-power)/(2*M_PI*std_landmark[0]*std_landmark[1]);
+       particleprob*=prob;
      }
 
      // find weight of the particle based on the associations
-
+     // find the prob of observations in map coords given mean is the nearest landmark poistion
+      p.weight=particleprob;
+      // weights[particleinx]=particleprob;
+      weights.push_back(particleprob);
+      ++particleinx;
    }
+
+
 }
 
 void ParticleFilter::resample() {
@@ -149,7 +174,15 @@ void ParticleFilter::resample() {
    * NOTE: You may find std::discrete_distribution helpful here.
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
+   std::default_random_engine gen;
+   std::discrete_distribution<int> distr(weights.begin(),weights.end());
+   // cout << "Weights # = "<< weights.size() << endl;
+   vector<Particle> resampled;
+   for(int i=0;i<num_particles;++i){
+     resampled.push_back(particles[distr(gen)]);
+   }
 
+   particles=resampled;
 }
 
 void ParticleFilter::SetAssociations(Particle& particle,
