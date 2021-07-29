@@ -114,7 +114,7 @@ int main() {
             noisy_observations.push_back(obs);
           }
 
-          cout << "obs size" << noisy_observations.size() << endl;
+          // cout << "obs size" << noisy_observations.size() << endl;
 
           // Update the weights and resample
           pf.updateWeights(sensor_range, sigma_landmark, noisy_observations, map);
@@ -129,7 +129,7 @@ int main() {
           double highest_weight = -1.0;
           Particle best_particle;
           double weight_sum = 0.0;
-          cout << "num_particles = " << num_particles << endl;
+          // cout << "num_particles = " << num_particles << endl;
           for (int i = 0; i < num_particles; ++i) {
             if (particles[i].weight > highest_weight) {
               highest_weight = particles[i].weight;
