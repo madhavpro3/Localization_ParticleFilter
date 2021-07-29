@@ -33,7 +33,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method
    *   (and others in this file).
    */
-  num_particles = 100;  // TODO: Set the number of particles
+  num_particles = 50;  // TODO: Set the number of particles
 
   std::default_random_engine gen;
   normal_distribution<double> posx(x,std[0]);
@@ -64,11 +64,16 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
    */
    // Bicycle model
    std::default_random_engine gen;
+   cout << "Numparticles = "<< particles.size() << endl;
    for(Particle& p:particles){
 
      double theta_f = p.theta + (yaw_rate*delta_t);
-     double x_f = p.x + (velocity/yaw_rate)*(sin(theta_f) - sin(p.theta));
-     double y_f = p.y + (velocity/yaw_rate)*(cos(p.theta) - cos(theta_f));
+     double x_f = p.x + velocity*(sin(theta_f) - sin(p.theta));
+     double y_f = p.y + velocity*(cos(p.theta) - cos(theta_f));
+     if(abs(yaw_rate) > 1e-05){
+       x_f = p.x + (velocity/yaw_rate)*(sin(theta_f) - sin(p.theta));
+       y_f = p.y + (velocity/yaw_rate)*(cos(p.theta) - cos(theta_f));
+     }
 
      normal_distribution<double> posx(x_f,std_pos[0]);
      normal_distribution<double> posy(y_f,std_pos[1]);
@@ -111,7 +116,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
    weights.clear();
-   int particleinx=0;
+   // int particleinx=0;
    for(Particle& p:particles){
      p.associations.clear();
      // convert observations of landmarks from vehicle coords to Map coords
@@ -124,7 +129,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
        v_lmark_mapcoords.push_back(lmark_mapcoords);
      }
 
-     double particleprob=1;
+     double particleweight=1;
      // associate lmark_mapcoords with true landmarks
      for(LandmarkObs& lmark_mapcoords: v_lmark_mapcoords){
 
@@ -153,15 +158,15 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
        power/=2;
 
        double prob = exp(-power)/(2*M_PI*std_landmark[0]*std_landmark[1]);
-       particleprob*=prob;
+       particleweight*=prob;
      }
 
      // find weight of the particle based on the associations
      // find the prob of observations in map coords given mean is the nearest landmark poistion
-      p.weight=particleprob;
-      // weights[particleinx]=particleprob;
-      weights.push_back(particleprob);
-      ++particleinx;
+      p.weight=particleweight;
+      // weights[particleinx]=particleweight;
+      weights.push_back(particleweight);
+      // ++particleinx;
    }
 
 
@@ -174,6 +179,7 @@ void ParticleFilter::resample() {
    * NOTE: You may find std::discrete_distribution helpful here.
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
+   cout << "NWeights = " << weights.size() << endl;
    std::default_random_engine gen;
    std::discrete_distribution<int> distr(weights.begin(),weights.end());
    // cout << "Weights # = "<< weights.size() << endl;
