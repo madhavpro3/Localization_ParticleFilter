@@ -33,7 +33,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method
    *   (and others in this file).
    */
-  num_particles = 10;  // TODO: Set the number of particles
+  num_particles = 800;  // TODO: Set the number of particles
 
   std::default_random_engine gen;
   normal_distribution<double> posx(x,std[0]);
@@ -64,7 +64,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
    */
    // Bicycle model
    std::default_random_engine gen;
-   // cout << "Numparticles = "<< particles.size() << endl;
    for(Particle& p:particles){
 
      double theta_f = p.theta;
@@ -180,10 +179,8 @@ void ParticleFilter::resample() {
    * NOTE: You may find std::discrete_distribution helpful here.
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
-   // cout << "NWeights = " << weights.size() << endl;
    std::default_random_engine gen;
    std::discrete_distribution<int> distr(weights.begin(),weights.end());
-   // cout << "Weights # = "<< weights.size() << endl;
    vector<Particle> resampled;
    for(int i=0;i<num_particles;++i){
      resampled.push_back(particles[distr(gen)]);

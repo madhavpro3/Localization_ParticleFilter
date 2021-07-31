@@ -72,7 +72,6 @@ int main() {
 
             pf.init(sense_x, sense_y, sense_theta, sigma_pos);
 
-            // cout << "Init!!" << endl;
 
           } else {
             // Predict the vehicle's next state from previous
@@ -81,8 +80,6 @@ int main() {
             double previous_yawrate = std::stod(j[1]["previous_yawrate"].get<string>());
 
             pf.prediction(delta_t, sigma_pos, previous_velocity, previous_yawrate);
-
-            // cout << "Pred!!" << endl;
 
           }
 
@@ -114,12 +111,9 @@ int main() {
             noisy_observations.push_back(obs);
           }
 
-          // cout << "obs size" << noisy_observations.size() << endl;
-
           // Update the weights and resample
           pf.updateWeights(sensor_range, sigma_landmark, noisy_observations, map);
 
-          // cout << "resample.." << endl;
           pf.resample();
 
           // Calculate and output the average weighted error of the particle
@@ -129,7 +123,6 @@ int main() {
           double highest_weight = -1.0;
           Particle best_particle;
           double weight_sum = 0.0;
-          // cout << "num_particles = " << num_particles << endl;
           for (int i = 0; i < num_particles; ++i) {
             if (particles[i].weight > highest_weight) {
               highest_weight = particles[i].weight;
